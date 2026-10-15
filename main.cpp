@@ -2,20 +2,19 @@
 #include <thread>
 #include <time.h>
 #include <vector>
-#include <fstream>//used for file-writting
+#include <mutex>
 
-std::vector<int>HISTOGRAM(1001);
-int COUNTER{1};
+//create mutex
+    std::mutex countmtx;
+    std::mutex arraymtx;
 
-//getting the problemcount for argument purposes
-    int getProblemCount(char* problemCount){
-        int x = std::stoi(problemCount);
-        if(x == 0)return 0;
-        return x;
-    }
+//created shared values
+    std::vector<int>HISTOGRAM(1001);
+    int COUNTER{1};
 
-//worker Function
-    size_t collatzFunction(long long n){
+    
+//Actual Math, returns stoppingTime(steps taken to reach 1)
+    int collatzFunction(long long n){
         size_t count{0};
         while(n !=1){
             count++;
@@ -28,9 +27,36 @@ int COUNTER{1};
         return count;
     }
 
+
+//Threads use this Worker function
+    void worker(int problemCount){
+        while(true){
+            countmtx.lock();
+                if(COUNTER>problemCount){ 
+                    countmtx.unlock();
+                    break;}
+                int count{COUNTER};
+                COUNTER++;
+            countmtx.unlock();
+            int steps {collatzFunction(count)};
+            arraymtx.lock();
+                HISTOGRAM[steps]++;//simplified version of =H[p+1];
+            arraymtx.unlock();
+        }
+    }
+
+//getting the problemcount for argument purposes
+    int getProblemCount(char* problemCount){
+        int x = std::stoi(problemCount);
+        if(x == 0)return 0;
+        return x;
+    }
+
 int main(int argc, char* argv[]){
-struct timespec start, end;
-std::ofstream file("histogram.csv");
+//Init variables
+    struct timespec start, end;
+    std::vector<std::thread>threads;
+
 //Confirming user inputs
     if(argc != 3){
         std::cout<<"Please enter the correct arguments: [Problem_Count, Num_Threads]\n";
@@ -42,30 +68,22 @@ std::ofstream file("histogram.csv");
         return 1;
     }
     int threadCount = std::stoi(argv[2]);
-/*we are solving problem 1,
-we return the stopping time, we need to take the stopping time and increment
-the array at location stopping time
 
-might be doing an excess assignment on position.
-*/
-clock_gettime(CLOCK_REALTIME,&start);
-//loop around the problem count something to do with threading happens here
-        size_t COUNT = 1;
-        size_t position{};
-        while(COUNT <= problemCount){
-             position = collatzFunction(COUNT);//so this functions return is the index
-             HISTOGRAM[position]++;//simplified version of =H[p+1];
-            COUNT++;
+//start timing the threads time taken to solve the sequence
+    clock_gettime(CLOCK_REALTIME,&start);
+        for(size_t i=0;i<threadCount;i++){
+            threads.push_back(std::thread(worker,problemCount));
         }
-clock_gettime(CLOCK_REALTIME,&end);
-double time_taken=(end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1000000000.0;
-
+        for(size_t i=0;i<threadCount;i++){
+            threads.at(i).join();
+        }
+    clock_gettime(CLOCK_REALTIME,&end);
 //now build the csv file
-for(size_t i=0;i<HISTOGRAM.size();i++){
-    file<<problemCount<<','<<threadCount<<','<<time_taken<<'\n';
-}
-for(size_t i=0;i<HISTOGRAM.size();i++){
-    std::cerr<<i<<",frequency_of_stopping_time("<<HISTOGRAM[i]<<")\n";
-}
-std::cerr<<time_taken<<'\n';
+    for(size_t i=0;i<HISTOGRAM.size();i++){
+        std::cout<<i<<','<<HISTOGRAM[i]<<'\n';
+    }
+
+//time-taken 
+    double time_taken = (end.tv_sec - start.tv_sec)+ (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+    std::cerr<<problemCount<<','<<threadCount<<','<<time_taken<<'\n';
 }
