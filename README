@@ -1,0 +1,33 @@
+# Project 2: MT Collatz
+## How to Run
+
+**Build the executable:**
+```bash
+make
+```
+
+**Run the program:**
+```bash
+./mt-collatz <ProblemCount> <NumberOfThreads>
+```
+
+**Save the histogram and program information to separate CSV files:**
+```bash
+./mt-collatz <ProblemCount> <NumberOfThreads> > histogram.csv 2> results.csv
+```
+The histogram is written to standard output, while program information (execution timing) is written to standard error.
+
+**Run without mutex locking (`-nolock`):**
+```bash
+./mt-collatz <ProblemCount> <NumberOfThreads> -nolock
+```
+This mode disables mutex locking and may produce incorrect results due to race conditions. This is used for testing purposes.
+
+**Clean build files:**
+```bash
+make clean
+```
+## Issues:
+- The main issue ran into while coding was understanding how threads work in code.
+It was hard to understand the access to the global COUNTER. I got stuck with the idea that the counter was supposed to supply the next number to the thread but this isnt the case as the mutex only needed to be set around the access. Whereas I was putting the mutex around the computation. This stopped multithreading and concurrency from being utilized properly, as the program was acting as if it were one thread after another, effectively operating like a single thread.
+

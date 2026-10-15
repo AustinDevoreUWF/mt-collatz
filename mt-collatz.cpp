@@ -1,19 +1,22 @@
+//Written by Austin Devore
+
 #include <iostream>
 #include <thread>
 #include <time.h>
 #include <vector>
 #include <mutex>
 #include <string>
-//create mutex
-    std::mutex countmtx;
-    std::mutex arraymtx;
 
-//created shared values
+//Create the mutex's for locking access:
+    std::mutex countmtx; //Updating shared COUNTER
+    std::mutex arraymtx; //Updating the shared HISTOGRAM array
+
+//Create values that will be shared by each thread
     std::vector<int>HISTOGRAM(1001);
     int COUNTER{1};
-    bool nolock{false};
+    bool nolock{false};//
     
-//Actual Math, returns stoppingTime(steps taken to reach 1)
+//Collatz calculation function. Returns Stopping Time(steps taken to reach 1)
     int collatzFunction(long long n){
         size_t count{0};
         while(n !=1){
@@ -26,7 +29,6 @@
         }
         return count;
     }
-
 
 //Threads use this Worker function
     void worker(int problemCount,bool nolock){
@@ -43,6 +45,7 @@
             return;
         }
         while(true){
+            //Lock the COUNT access to prevent Race Conditions
             countmtx.lock();
                 if(COUNTER>problemCount){ 
                     countmtx.unlock();
@@ -51,14 +54,18 @@
                 COUNTER++;
             countmtx.unlock();
             int steps {collatzFunction(count)};
-            arraymtx.lock();
-                if(steps>1000) return;
-                HISTOGRAM[steps]++;//simplified version of =H[p+1];
+            //Lock adding to the HISTOGRAM Array to prevent inacurate incrementation
+            arraymtx.lock(); 
+                if(steps>1000){
+                    arraymtx.unlock();
+                    return;
+                }
+                HISTOGRAM[steps]++;
             arraymtx.unlock();
         }
     }
 
-//getting the problemcount for argument purposes
+//getting and validating problemCount
     int getProblemCount(char* problemCount){
         int x = std::stoi(problemCount);
         if(x == 0)return 0;
@@ -66,7 +73,8 @@
     }
 
 int main(int argc, char* argv[]){
-//Init variables
+
+//Initialize variables
     struct timespec start, end;
     std::vector<std::thread>threads;
 
@@ -103,11 +111,14 @@ int main(int argc, char* argv[]){
             threads.at(i).join();
         }
     clock_gettime(CLOCK_REALTIME,&end);
-//now build the csv file
+
+//Output to a CSV file to build hte Histogram 
     for(size_t i=0;i<HISTOGRAM.size();i++){
         std::cout<<i<<','<<HISTOGRAM[i]<<'\n';
     }
-//time-taken 
+
     double time_taken = (end.tv_sec - start.tv_sec)+ (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+
+//print program information to the cerr stream 
     std::cerr<<problemCount<<','<<threadCount<<','<<time_taken<<'\n';
 }

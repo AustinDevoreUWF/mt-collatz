@@ -12,4 +12,4 @@ mt-collatz.o: mt-collatz.cpp
 	$(CXX) $(CXXFLAGS) -c mt-collatz.cpp -o mt-collatz.o
 
 clean:
-	rm -f $(TARGET) mt-collatz.o
+	rm -f $(TARGET) mt-collatz.o 
