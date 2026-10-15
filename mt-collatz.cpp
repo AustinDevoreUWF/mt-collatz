@@ -96,8 +96,8 @@ int main(int argc, char* argv[]){
     }
 
     int getThreadCount = std::stoi(argv[2]);
-    if(getThreadCount <= 0){
-        std::cout<<"Invalid Argument: User entered, threadCount <= 0\n";
+    if(getThreadCount <= 0 || getThreadCount > 8){
+        std::cout<<"Please enter a Thread Count between 1-8\n";
         return 1;
     }
     size_t threadCount = size_t(getThreadCount);
