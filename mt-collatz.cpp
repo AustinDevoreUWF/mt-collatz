@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <thread>
-#include <time.h>
+#include <chrono>
 #include <vector>
 #include <mutex>
 #include <string>
@@ -75,7 +75,7 @@
 int main(int argc, char* argv[]){
 
 //Initialize variables
-    struct timespec start, end;
+    std::chrono::steady_clock::time_point start, end;
     std::vector<std::thread>threads;
 
 //Confirming user inputs
@@ -103,21 +103,24 @@ int main(int argc, char* argv[]){
     size_t threadCount = size_t(getThreadCount);
 
 //start timing the threads time taken to solve the sequence
-    clock_gettime(CLOCK_REALTIME,&start);
-        for(size_t i=0;i<threadCount;i++){
-            threads.push_back(std::thread(worker,problemCount,nolock));
-        }
-        for(size_t i=0;i<threadCount;i++){
-            threads.at(i).join();
-        }
-    clock_gettime(CLOCK_REALTIME,&end);
+    start = std::chrono::steady_clock::now();
+
+    for(size_t i = 0; i < threadCount; i++){
+        threads.push_back(std::thread(worker, problemCount, nolock));
+    }
+
+    for(size_t i = 0; i < threadCount; i++){
+        threads.at(i).join();
+    }
+
+    end = std::chrono::steady_clock::now();
 
 //Output to a CSV file to build hte Histogram 
     for(size_t i=0;i<HISTOGRAM.size();i++){
         std::cout<<i<<','<<HISTOGRAM[i]<<'\n';
     }
 
-    double time_taken = (end.tv_sec - start.tv_sec)+ (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+    double time_taken = std::chrono::duration<double>(end - start).count();
 
 //print program information to the cerr stream 
     std::cerr<<problemCount<<','<<threadCount<<','<<time_taken<<'\n';
